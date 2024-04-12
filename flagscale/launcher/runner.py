@@ -66,8 +66,9 @@ def _flatten_dict_to_args(config_dict, ignore_keys=[]):
             args.append(f'--{key}')
             for v in value:
                 args.append(f'{v}')
-        elif isinstance(value, bool) and value:
-            args.append(f'--{key}')
+        elif isinstance(value, bool):
+            if value:
+                args.append(f'--{key}')
         else:
             args.append(f'--{key}')
             args.append(f'{value}')
@@ -219,18 +220,22 @@ class SSHRunner(MultiNodeRunner):
             # Now, it always appends to the output file
             f.write(f"nohup bash -c \"$cmd\" >> {host_output_file} 2>&1 & echo $! > {host_pid_file}\n")
             f.write("\n")
+            f.flush()
+            os.fsync(f.fileno())
         os.chmod(host_run_script_file, 0o755)
 
         return host_run_script_file
 
     def _run_each(
-        self, host, master_addr, master_port, nnodes, node_rank, nproc_per_node
+        self, host, master_addr, master_port, nnodes, node_rank, nproc_per_node, is_test = False
     ):
         export_cmd = []
         for k, v in self.user_envs.items():
             export_cmd += [f"{k}={v}"]
 
         logging_config = self.config.train.system.logging
+        log_dir = os.path.join(logging_config.details_dir, f"host_{node_rank}_{host}")
+
         torchrun_cmd = ["torchrun",
                         "--rdzv-id", self.rdzv_id, 
                         "--master_addr", str(master_addr),
@@ -238,12 +243,17 @@ class SSHRunner(MultiNodeRunner):
                         "--nnodes", str(nnodes),
                         "--node_rank", str(node_rank), 
                         "--nproc_per_node", str(nproc_per_node),
-                        "--log_dir", str(logging_config.details_dir),
+                        "--log_dir", str(log_dir),
                         "--redirects", str(3),
                         "--tee", str(3),
                         ]
 
-        cmd = shlex.join(export_cmd + torchrun_cmd + [self.user_script] + self.user_args)
+        if is_test:
+            cmd = shlex.join(export_cmd + torchrun_cmd + [self.user_script] + self.user_args)
+            test_cmd = ";python tests/functional_tests/check_result.py " + self.config.experiment.exp_dir
+            cmd = cmd + test_cmd
+        else:
+            cmd = shlex.join(export_cmd + torchrun_cmd + [self.user_script] + self.user_args)
 
         host_run_script_file = self._generate_run_script(host, node_rank, cmd)
 
@@ -261,28 +271,30 @@ class SSHRunner(MultiNodeRunner):
             logger.info(f"SSHRunner is running the command: {cmd}")
             subprocess.run(cmd, shell=True, check=True)
 
-    def run(self):
+    def run(self, is_test=False):
+
         self._prepare()
         logger.info("\n************** configuration ***********")
         logger.info(f'\n{OmegaConf.to_yaml(self.config)}')
 
-        visible_devices = self.user_envs.get("CUDA_VISIBLE_DEVICES", None) 
+        visible_devices = self.user_envs.get("CUDA_VISIBLE_DEVICES", None)
         if visible_devices:
             visible_devices = visible_devices.split(",")
             num_visible_devices = len(visible_devices)
         else:
             num_visible_devices = 1
 
-        print("resources", self.resources)
+        master_port = get_free_port()
         # If hostfile is not provided, run the command on localhost
         if self.resources is None:
             self._run_each(
                 host="localhost",
                 master_addr="localhost",
-                master_port=get_free_port(),
+                master_port=master_port,
                 nnodes=1,
                 node_rank=0,
                 nproc_per_node=num_visible_devices,
+                is_test=is_test
             )
             return
 
@@ -294,12 +306,11 @@ class SSHRunner(MultiNodeRunner):
                     f"Number of slots ({slots}) does not match the number of visible devices ({num_visible_devices})."
             type = resource_info['type']
             master_addr = host_list[0]
-            master_port = get_free_port()
             nproc_per_node = slots
             nnodes = len(self.resources)
             node_rank = host_list.index(host)
             self._run_each(
-                host, master_addr, master_port, nnodes, node_rank, nproc_per_node
+                host, master_addr, master_port, nnodes, node_rank, nproc_per_node, is_test
             )
 
     def _generate_stop_script(self, host, node_rank):
@@ -324,6 +335,8 @@ class SSHRunner(MultiNodeRunner):
             # TODO: This is a temporary fix. We need to find a better way to stop the job.
             f.write("    pkill -f 'torchrun'\n")
             f.write("fi\n")
+            f.flush()
+            os.fsync(f.fileno())
         os.chmod(host_stop_script_file, 0o755)
 
         return host_stop_script_file

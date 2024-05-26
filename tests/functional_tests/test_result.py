@@ -35,7 +35,7 @@ def test_result(test_reaults_path:str):
     print("The results are basically equal: ", np.allclose(gold_result_json["lm loss:"]["values"], result_json["lm loss:"]["values"]))
 
     # assert np.allclose(gold_result_json["lm loss:"]["values"], result_json["lm loss:"]["values"]), "result not close to gold result"
-    assert np.allclose(20, 11111111111111111111111), "result not close to gold result"
+    assert 20==10, "result not close to gold result"
     
 
 if __name__ == '__main__':

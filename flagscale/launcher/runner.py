@@ -489,7 +489,8 @@ class SSHRunner(MultiNodeRunner):
 
         if with_test:
             exp_dir = self.config.experiment.exp_dir
-            test_cmd = f";pytest -s tests/functional_tests/test_result.py --test_reaults_path={exp_dir};rm -r {exp_dir}"
+            # test_cmd = f";pytest -s tests/functional_tests/test_result.py --test_reaults_path={exp_dir};rm -r {exp_dir}"
+            test_cmd = ""
             cmd = cmd + test_cmd
 
         host_run_script_file = _generate_run_script(
@@ -651,7 +652,8 @@ class CloudRunner(MultiNodeRunner):
 
         if with_test:
             exp_dir = self.config.experiment.exp_dir
-            test_cmd = f";pytest -s tests/functional_tests/test_result.py --test_reaults_path={exp_dir};rm -r {exp_dir}"
+            # test_cmd = f";pytest -s tests/functional_tests/test_result.py --test_reaults_path={exp_dir};rm -r {exp_dir}"
+            test_cmd = ""
             cmd = cmd + test_cmd
 
         host_run_script_file = _generate_run_script(

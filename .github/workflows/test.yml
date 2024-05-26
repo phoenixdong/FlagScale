@@ -104,3 +104,4 @@ jobs:
         - name: unit_test_flagscale
           run: |
             python run.py --config-path tests/functional_tests/aquila/conf --config-name config action=test
+            pytest -s tests/functional_tests/test_result.py --test_reaults_path=.tests/functional_tests/aquila/test_result

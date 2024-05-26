@@ -18,7 +18,7 @@ jobs:
           NODE_ENV: development
         ports:
           - 80
-        options: --gpus all --name flagscale_cicd --hostname flagscale_cicd 
+        options: --gpus all --hostname flagscale_cicd 
       steps:
         - name: checkout-code
           uses: actions/checkout@v2

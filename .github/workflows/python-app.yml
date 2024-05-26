@@ -1,0 +1,28 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+
+name: test
+
+on:
+  push:
+    branches: [ "main" ]
+  push:
+    branches: [ "main" ]
+
+jobs:
+  container-test-job:
+      runs-on: self-hosted
+      container:
+        image: flagscale_cicd_image:v1.0
+        env:                                         
+          NODE_ENV: development
+        ports:
+          - 80
+        options: --gpus all --name flagscale_cicd --hostname flagscale_cicd 
+      steps:
+        - name: checkout-code
+          uses: actions/checkout@v2
+        - name: unit_test_flagscale
+          run: |
+            export PYTHONPATH=./flagscale:$PYTHONPATH
+            pytest -x tests/unit_tests/launcher/test_parse_hostfile.py

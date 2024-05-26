@@ -377,7 +377,11 @@ def _generate_run_script(config, host, node_rank, cmd, background=True, with_tes
         f.write(f'cmd="{cmd}"\n')
         f.write(f"\n")
         if with_test:
-            f.write(f'bash -c "$cmd" \n')
+            # dong
+            # f.write(f'bash -c "$cmd" \n')
+            f.write(
+                    f'nohup bash -c "$cmd" >> {host_output_file} 2>&1 & echo $! > {host_pid_file}\n'
+                )
         else:
             # TODO: need a option to control whether to append or overwrite the output file
             # Now, it always appends to the output file
@@ -485,7 +489,9 @@ class SSHRunner(MultiNodeRunner):
 
         if with_test:
             exp_dir = self.config.experiment.exp_dir
-            test_cmd = f";python tests/functional_tests/check_result.py {exp_dir};rm -r {exp_dir}"
+            # dong
+            test_cmd = f";python tests/functional_tests/check_result.py {exp_dir}"
+            # test_cmd = ";rm -r {exp_dir}"
             cmd = cmd + test_cmd
 
         host_run_script_file = _generate_run_script(
@@ -644,7 +650,9 @@ class CloudRunner(MultiNodeRunner):
 
         if with_test:
             exp_dir = self.config.experiment.exp_dir
-            test_cmd = f";python tests/functional_tests/check_result.py {exp_dir};rm -r {exp_dir}"
+            # dong
+            test_cmd = f";python tests/functional_tests/check_result.py {exp_dir}"
+            # test_cmd = ";rm -r {exp_dir}"
             cmd = cmd + test_cmd
 
         host_run_script_file = _generate_run_script(

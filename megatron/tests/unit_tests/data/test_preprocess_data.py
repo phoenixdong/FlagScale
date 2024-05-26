@@ -169,19 +169,19 @@ def do_test_preprocess_data(temp_dir, extra_args=[]):
 def gpt2_vocab(odir):
     if os.path.exists(__LOCAL_GPT2_VOCAB):
         return __LOCAL_GPT2_VOCAB
-    path = os.path.join(odir, "vocab.json")
-    with open(path, "wb") as writer:
-        writer.write(requests.get(PRETRAINED_VOCAB_ARCHIVE_MAP['gpt2']).content)
-    return path
+    # path = os.path.join(odir, "vocab.json")
+    # with open(path, "wb") as writer:
+    #     writer.write(requests.get(PRETRAINED_VOCAB_ARCHIVE_MAP['gpt2']).content)
+    # return path
 
 
 def gpt2_merge(odir):
     if os.path.exists(__LOCAL_GPT2_MERGE):
         return __LOCAL_GPT2_MERGE
-    path = os.path.join(odir, "merge.txt")
-    with open(path, "wb") as writer:
-        writer.write(requests.get(PRETRAINED_MERGES_ARCHIVE_MAP['gpt2']).content)
-    return path
+    # path = os.path.join(odir, "merge.txt")
+    # with open(path, "wb") as writer:
+    #     writer.write(requests.get(PRETRAINED_MERGES_ARCHIVE_MAP['gpt2']).content)
+    # return path
 
 
 def test_preprocess_data_gpt():
@@ -208,10 +208,10 @@ def test_preprocess_data_gpt():
 def bert_vocab(odir):
     if os.path.exists(__LOCAL_BERT_VOCAB):
         return __LOCAL_BERT_VOCAB
-    path = os.path.join(odir, "vocab.txt")
-    with open(path, "wb") as writer:
-        writer.write(requests.get(__HUGGINGFACE_BERT_BASE_UNCASED_VOCAB).content)
-    return path
+    # path = os.path.join(odir, "vocab.txt")
+    # with open(path, "wb") as writer:
+    #     writer.write(requests.get(__HUGGINGFACE_BERT_BASE_UNCASED_VOCAB).content)
+    # return path
 
 
 def test_preprocess_data_bert():

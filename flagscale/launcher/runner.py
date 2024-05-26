@@ -83,11 +83,15 @@ def get_host_name_or_ip():
     return IP
 
 
-def run_local_command(cmd, dryrun=False):
+# dong
+def run_local_command(cmd, dryrun=False, with_test=False):
     logger.info(f"Run the local command: {cmd}")
     if dryrun:
         return
-    result = subprocess.run(cmd, shell=True, check=True, capture_output=True, text=True)
+    if with_test:
+        result = subprocess.run(cmd, shell=True, check=True)
+    else:
+        result = subprocess.run(cmd, shell=True, check=True, capture_output=True, text=True)
     if result.returncode != 0:
         print(f"Command {cmd} failed with return code {result.returncode}.")
         print(f"Output: {result.stdout}")
@@ -377,11 +381,7 @@ def _generate_run_script(config, host, node_rank, cmd, background=True, with_tes
         f.write(f'cmd="{cmd}"\n')
         f.write(f"\n")
         if with_test:
-            # dong
-            # f.write(f'bash -c "$cmd" \n')
-            f.write(
-                    f'nohup bash -c "$cmd" >> {host_output_file} 2>&1 & echo $! > {host_pid_file}\n'
-                )
+            f.write(f'bash -c "$cmd" \n')
         else:
             # TODO: need a option to control whether to append or overwrite the output file
             # Now, it always appends to the output file
@@ -489,9 +489,7 @@ class SSHRunner(MultiNodeRunner):
 
         if with_test:
             exp_dir = self.config.experiment.exp_dir
-            # dong
-            test_cmd = f";python tests/functional_tests/check_result.py {exp_dir}"
-            # test_cmd = ";rm -r {exp_dir}"
+            test_cmd = f";python tests/functional_tests/check_result.py {exp_dir};rm -r {exp_dir}"
             cmd = cmd + test_cmd
 
         host_run_script_file = _generate_run_script(
@@ -514,7 +512,8 @@ class SSHRunner(MultiNodeRunner):
             # Step 3: run the host_run_script_file on the remote host
             run_ssh_command(host, f"bash {host_run_script_file}", ssh_port, dryrun)
         else:
-            run_local_command(f"bash {host_run_script_file}", dryrun)
+            # dong
+            run_local_command(f"bash {host_run_script_file}", dryrun, with_test=with_test)
 
     def run(self, with_test=False, dryrun=False):
         self._prepare()
@@ -588,9 +587,11 @@ class SSHRunner(MultiNodeRunner):
                     host, host_stop_script_file, logging_config.scripts_dir, ssh_port
                 )
             # Step 3: run the host_run_script_file on the remote host
+            # dong
             run_ssh_command(host, f"bash {host_stop_script_file}", ssh_port)
         else:
-            run_local_command(f"bash {host_stop_script_file}")
+            # dong
+            run_local_command(f"bash {host_stop_script_file}", with_test=with_test)
 
     def stop(self):
         if self.resources is None:
@@ -650,16 +651,15 @@ class CloudRunner(MultiNodeRunner):
 
         if with_test:
             exp_dir = self.config.experiment.exp_dir
-            # dong
-            test_cmd = f";python tests/functional_tests/check_result.py {exp_dir}"
-            # test_cmd = ";rm -r {exp_dir}"
+            test_cmd = f";python tests/functional_tests/check_result.py {exp_dir};rm -r {exp_dir}"
             cmd = cmd + test_cmd
 
         host_run_script_file = _generate_run_script(
             self.config, host, node_rank, cmd, background=False, with_test=with_test
         )
 
-        run_local_command(f"bash {host_run_script_file}", dryrun)
+        # dong
+        run_local_command(f"bash {host_run_script_file}", dryrun, with_test=with_test)
 
     def run(self, with_test=False, dryrun=False):
         self._prepare()

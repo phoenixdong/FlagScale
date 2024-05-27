@@ -96,12 +96,12 @@ jobs:
         #     # torchrun --nproc_per_node=8 -m pytest -q -x tests/unit_tests/transformer/test_mlp.py
         #     # torchrun --nproc_per_node=8 -m pytest -q -x tests/unit_tests/transformer/test_retro_attention.py
 
-        # - name: unit_test_flagscale
-        #   run: |
-        #     export PYTHONPATH=./flagscale:$PYTHONPATH
-        #     pytest -x tests/unit_tests/launcher/test_parse_hostfile.py
-        
         - name: unit_test_flagscale
           run: |
-            python run.py --config-path tests/functional_tests/aquila/conf --config-name config action=test
-            pytest -s tests/functional_tests/test_result.py --test_reaults_path=./tests/functional_tests/aquila/test_result
+            export PYTHONPATH=./flagscale:$PYTHONPATH
+            pytest -x tests/unit_tests/launcher/test_parse_hostfile.py
+        
+        # - name: unit_test_flagscale
+        #   run: |
+        #     python run.py --config-path tests/functional_tests/aquila/conf --config-name config action=test
+        #     pytest -s tests/functional_tests/test_result.py --test_reaults_path=./tests/functional_tests/aquila/test_result

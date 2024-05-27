@@ -49,3 +49,6 @@ def test_parse_hostfile_empty(mock_os_path_isfile, mock_open):
     mock_open.return_value.readlines.return_value = hostfile_content
     with pytest.raises(ValueError):
         parse_hostfile("/path/to/hostfile.txt")
+
+def test_dummy_error():
+    assert 1==2,

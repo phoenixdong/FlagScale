@@ -26,13 +26,13 @@ jobs:
       id: get_include_files
       run: |
         INCLUDE_FOLDS=("flagscale" "tests")
-        INCLUD_FILES=$(bash tests/scripts/format_tests/search_py_files.sh "${INCLUDE_FOLDS[@]}")
+        INCLUDE_FILES=$(bash tests/scripts/format_tests/search_py_files.sh "${INCLUDE_FOLDS[@]}")
 
         EXCLUDE_FOLDS=("megatron/megatron/core" "megatron/megatron/inference")
-        EXCLUD_FILES=$(bash tests/scripts/format_tests/search_py_files.sh "${EXCLUDE_FOLDS[@]}")
+        EXCLUDE_FILES=$(bash tests/scripts/format_tests/search_py_files.sh "${EXCLUDE_FOLDS[@]}")
 
-        echo "include_files=$INCLUD_FILES" >> $GITHUB_ENV
-        echo "exclude_files=$EXCLUD_FILES" >> $GITHUB_ENV
+        echo "include_files='$INCLUDE_FILES'" >> $GITHUB_ENV
+        echo "exclude_files='$EXCLUDE_FILES'" >> $GITHUB_ENV
         
     - name: Run Black
       run: |

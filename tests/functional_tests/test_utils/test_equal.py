@@ -1,5 +1,6 @@
 import os
 import json
+import shutil
 import pytest
 import numpy as np
 
@@ -53,5 +54,8 @@ def test_equal(test_path, test_type, test_model, test_case):
     _atol=1e-8
     
     print("The results are basically equal: ", np.allclose(gold_result_json["lm loss:"]["values"], result_json["lm loss:"]["values"], rtol=_rtol, atol=_atol))
+    
+    if os.path.exists(test_result_path):
+        shutil.rmtree(test_result_path)
 
     assert np.allclose(gold_result_json["lm loss:"]["values"], result_json["lm loss:"]["values"], rtol=_rtol, atol=_atol), "Result not close to gold result"

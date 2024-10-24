@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# Exit immediately if a command exits with a non-zero status, but continue for black and isort
-set -e
-
 # Define the shared paths to be formatted
 TARGET_PATHS="flagscale/auto_tuner/*.py \
 flagscale/auto_tuner/prune/*.py \

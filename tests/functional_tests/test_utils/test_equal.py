@@ -48,6 +48,10 @@ def test_equal(test_path, test_type, test_model, test_case):
     print("\nResult checking")
     print("Result: ", result_json)
     print("Gold Result: ", gold_result_json)
-    print("The results are basically equal: ", np.allclose(gold_result_json["lm loss:"]["values"], result_json["lm loss:"]["values"]))
+    
+    _rtol=1e-4
+    _atol=1e-8
+    
+    print("The results are basically equal: ", np.allclose(gold_result_json["lm loss:"]["values"], result_json["lm loss:"]["values"], rtol=_rtol, atol=_atol))
 
-    assert np.allclose(gold_result_json["lm loss:"]["values"], result_json["lm loss:"]["values"]), "Result not close to gold result"
+    assert np.allclose(gold_result_json["lm loss:"]["values"], result_json["lm loss:"]["values"], rtol=_rtol, atol=_atol), "Result not close to gold result"

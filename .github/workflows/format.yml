@@ -21,40 +21,37 @@ jobs:
     - name: Install dependencies
       run: |
         pip install black isort
-
-    - name: Get Included Python Files
-      id: get_include_files
-      run: |
-        INCLUDE_FOLDS=("flagscale" "tests")
-        INCLUDE_FILES=$(bash tests/scripts/format_tests/search_py_files.sh "${INCLUDE_FOLDS[@]}")
-
-        EXCLUDE_FOLDS=("megatron/megatron/core" "megatron/megatron/inference")
-        EXCLUDE_FILES=$(bash tests/scripts/format_tests/search_py_files.sh "${EXCLUDE_FOLDS[@]}")
-
-        echo "include_files='$INCLUDE_FILES'" >> $GITHUB_ENV
-        echo "exclude_files='$EXCLUDE_FILES'" >> $GITHUB_ENV
         
     - name: Run Black
       run: |
-        _include_files=""
-        for file in $include_files; do
-            _include_files+="$file|"
-        done
-        echo "$_include_files"
-
-        _exclude_files=""
-        for file in $exclude_files; do
-            _exclude_files+="$file|"
-        done
-        echo "$_exclude_files"
+        INCLUDE_FOLDS=("flagscale" "tests")
+        INCLUDE_FILES=$(bash tests/scripts/format_tests/search_py_files.sh "${INCLUDE_FOLDS[@]}")
+        EXCLUDE_FOLDS=("megatron/megatron/core" "megatron/megatron/inference")
+        EXCLUDE_FILES=$(bash tests/scripts/format_tests/search_py_files.sh "${EXCLUDE_FOLDS[@]}")
         
-        black --include "$_include_files" --exclude "$_exclude_files" --diff .
+        include_files=""
+        for file in $INCLUDE_FILES; do
+            include_files+="$file|"
+        done
+        echo "$include_files"
+
+        exclude_files=""
+        for file in $EXCLUDE_FILES; do
+            exclude_files+="$file|"
+        done
+        echo "$exclude_files"
+        
+        black --include "$include_files" --exclude "$exclude_files" --diff .
 
     - name: Run Isort
       run: |
-        echo "$include_files"
-        _skip_files=""
-        for file in $exclude_files; do
-            _skip_files+="--skip $file "
+        INCLUDE_FOLDS=("flagscale" "tests")
+        INCLUDE_FILES=$(bash tests/scripts/format_tests/search_py_files.sh "${INCLUDE_FOLDS[@]}")
+        EXCLUDE_FOLDS=("megatron/megatron/core" "megatron/megatron/inference")
+        EXCLUDE_FILES=$(bash tests/scripts/format_tests/search_py_files.sh "${EXCLUDE_FOLDS[@]}")
+        echo "$INCLUDE_FILES"
+        skip_files=""
+        for file in $EXCLUDE_FILES; do
+            skip_files+="--skip $file "
         done
-        isort --profile black "$include_files" $_skip_files
+        isort --profile black "$INCLUDE_FILES" $skip_files

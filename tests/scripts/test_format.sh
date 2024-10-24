@@ -5,7 +5,7 @@ TARGET_PATHS="flagscale/auto_tuner/*.py \
 flagscale/auto_tuner/prune/*.py \
 flagscale/auto_tuner/record/*.py \
 flagscale/auto_tuner/search/*.py \
-flagscale/launcher/*.py \
+flagscale/runner/*.py \
 flagscale/logger.py \
 flagscale/patches_utils.py \
 flagscale/datasets/sft_dataset.py"

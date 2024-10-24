@@ -41,7 +41,7 @@ jobs:
         done
         echo "$exclude_files"
         
-        black --include "$include_files" --exclude "$exclude_files" --diff .
+        echo "black --include "$include_files" --exclude "$exclude_files" --diff ."
 
     - name: Run Isort
       run: |
@@ -49,9 +49,12 @@ jobs:
         INCLUDE_FILES=$(bash tests/scripts/format_tests/search_py_files.sh "${INCLUDE_FOLDS[@]}")
         EXCLUDE_FOLDS=("megatron/megatron/core" "megatron/megatron/inference")
         EXCLUDE_FILES=$(bash tests/scripts/format_tests/search_py_files.sh "${EXCLUDE_FOLDS[@]}")
+        
         echo "$INCLUDE_FILES"
         skip_files=""
         for file in $EXCLUDE_FILES; do
             skip_files+="--skip $file "
         done
-        isort --profile black "$INCLUDE_FILES" $skip_files
+        echo "$skip_files"
+        
+        echo "isort --profile black "$INCLUDE_FILES" $skip_files"

@@ -33,15 +33,16 @@ jobs:
         for file in $INCLUDE_FILES; do
             include_files+="$file|"
         done
+        include_files=${include_files::-1}
         echo "$include_files"
 
         exclude_files=""
         for file in $EXCLUDE_FILES; do
             exclude_files+="$file|"
         done
+        exclude_files=${exclude_files::-1}
         echo "$exclude_files"
         
-        echo "black --include '$include_files' --exclude '$exclude_files' --diff ."
         black --include '$include_files' --exclude '$exclude_files' --diff .
 
     - name: Run Isort

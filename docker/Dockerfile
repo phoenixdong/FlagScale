@@ -1,7 +1,14 @@
-FROM nvcr.io/nvidia/pytorch:24.05-py3
+ARG CUDA_VERSION=12.4.1
+FROM nvcr.io/nvidia/cuda:${CUDA_VERSION}-devel-ubuntu22.04
 
 ENV DEBIAN_FRONTEND noninteractive
 ENV TZ=Asia/Shanghai
+
+##############################################################################
+# Temporary Installation Directory
+##############################################################################
+ENV STAGE_DIR=/tmp
+RUN mkdir -p ${STAGE_DIR}
 
 ##############################################################################
 # Change apt source to Ksyun
@@ -11,49 +18,112 @@ RUN sed -i "s#\S\+#http://apt.ksyun.cn/ubuntu/#2" /etc/apt/sources.list && \
     > /etc/dpkg/dpkg.cfg.d/pkg-config-hook-config
 
 ##############################################################################
-# Install basic utilities
+# Install Basic Utilities
 ##############################################################################
 RUN apt-get update && \
+    apt-get install -y --no-install-recommends apt-utils && \
+    echo "N" | apt-get install -y --no-install-recommends pkg-config && \
     apt-get install -y --no-install-recommends \
-        software-properties-common build-essential autotools-dev \
-        nfs-common pdsh \
-        curl wget vim tmux less unzip \
-        htop iftop iotop ca-certificates openssh-client openssh-server \
-        rsync iputils-ping net-tools sudo \
-        tzdata psmisc screen libx11-dev llvm-dev && \
-    apt-get clean
+        autotools-dev build-essential ca-certificates ccache cmake curl emacs \
+        gcc git g++ htop iftop iotop \ 
+        libcairo2-dev libfontconfig-dev libibverbs1 libibverbs-dev libnuma-dev libx11-dev \
+        lsb-release net-tools nfs-common ninja-build openssh-client \
+        openssh-server pdsh psmisc rsync \
+        screen software-properties-common sudo tmux tzdata \
+        unzip vim wget&& \
+        apt-get clean && \
+        rm -rf /var/lib/apt/lists/* 
 
 ##############################################################################
-# SSH configuration (not secure, only for development purpose)
+# Install Python
 ##############################################################################
-RUN mkdir -p /run/sshd && \
-    ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa && \
-    cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys && \
-    echo "    StrictHostKeyChecking no" >> /etc/ssh/ssh_config
+ARG PYTHON_VERSION=3.12
+RUN add-apt-repository ppa:deadsnakes/ppa && \
+        apt-get update -y && \
+        apt-get install -y python${PYTHON_VERSION} python${PYTHON_VERSION}-dev python${PYTHON_VERSION}-venv && \
+        update-alternatives --install /usr/bin/python3 python3 /usr/bin/python${PYTHON_VERSION} 1 && \
+        update-alternatives --set python3 /usr/bin/python${PYTHON_VERSION} && \
+        ln -sf /usr/bin/python${PYTHON_VERSION}-config /usr/bin/python3-config && \
+        curl -sS https://bootstrap.pypa.io/get-pip.py | python${PYTHON_VERSION} && \
+        python3 --version && python3 -m pip --version && \
+        ln -s /usr/bin/python3 /usr/bin/python && \
+        apt-get clean && \
+        rm -rf /var/lib/apt/lists/* 
+        
+# cudnn-12
+RUN cd ${STAGE_DIR} && \ 
+        wget https://developer.download.nvidia.com/compute/cudnn/9.6.0/local_installers/cudnn-local-repo-ubuntu2204-9.6.0_1.0-1_amd64.deb && \
+        dpkg -i cudnn-local-repo-ubuntu2204-9.6.0_1.0-1_amd64.deb && \
+        cp /var/cudnn-local-repo-ubuntu2204-9.6.0/cudnn-*-keyring.gpg /usr/share/keyrings/ && \
+        apt-get update && \
+        apt-get -y install cudnn-cuda-12 && \
+        rm cudnn-local-repo-ubuntu2204-9.6.0_1.0-1_amd64.deb
 
 ##############################################################################
-# Uninstall unnecessary packages and their dependencies
+# Client Liveness & Uncomment Port 22 for SSH Daemon
 ##############################################################################
-RUN pip install pip-autoremove && \
-    pip-autoremove torch torchvision torchaudio torch-tensorrt \
-        pytorch-quantization pytorch-triton \
-        flash-attn transformer-engine tensorboard -y
+# Keep SSH client alive from server side
+RUN echo "ClientAliveInterval 30" >> /etc/ssh/sshd_config
+RUN cp /etc/ssh/sshd_config ${STAGE_DIR}/sshd_config && \
+        sed "0,/^#Port 22/s//Port 22/" ${STAGE_DIR}/sshd_config > /etc/ssh/sshd_config
+
+# from vllm dockerfile, need debug
+# ##############################################################################
+# # SCCACHE
+# ##############################################################################
+# ENV SCCACHE_BUCKET_NAME=flagscale-build-sccache
+# ENV SCCACHE_REGION_NAME=us-west-2
+# ENV SCCACHE_S3_NO_CREDENTIALS=0
+# RUN cd ${STAGE_DIR} && \
+#         echo "Installing sccache..." \
+#         curl -L -o sccache.tar.gz https://github.com/mozilla/sccache/releases/download/v0.8.1/sccache-v0.8.1-x86_64-unknown-linux-musl.tar.gz && \
+#         tar -xzf sccache.tar.gz && \
+#         mv sccache-v0.8.1-x86_64-unknown-linux-musl/sccache /usr/bin/sccache && \
+#         rm -rf sccache.tar.gz sccache-v0.8.1-x86_64-unknown-linux-musl
+
+##############################################################################
+# OPENMPI
+##############################################################################
+ENV OPENMPI_BASEVERSION=4.1
+ENV OPENMPI_VERSION=${OPENMPI_BASEVERSION}.6
+RUN cd ${STAGE_DIR} && \
+        wget -q -O - https://download.open-mpi.org/release/open-mpi/v${OPENMPI_BASEVERSION}/openmpi-${OPENMPI_VERSION}.tar.gz | tar xzf - && \
+        cd openmpi-${OPENMPI_VERSION} && \
+        ./configure --prefix=/usr/local/openmpi-${OPENMPI_VERSION} && \
+        make -j"$(nproc)" install && \
+        ln -s /usr/local/openmpi-${OPENMPI_VERSION} /usr/local/mpi && \
+        # Sanity check:
+        test -f /usr/local/mpi/bin/mpic++ && \
+        cd .. && \
+        rm -r openmpi-${OPENMPI_VERSION}
+ENV PATH=/usr/local/mpi/bin:${PATH} \
+        LD_LIBRARY_PATH=/usr/local/lib:/usr/local/mpi/lib:/usr/local/mpi/lib64:${LD_LIBRARY_PATH}
+# Create a wrapper for OpenMPI to allow running as root by default
+RUN mv /usr/local/mpi/bin/mpirun /usr/local/mpi/bin/mpirun.real && \
+        echo '#!/bin/bash' > /usr/local/mpi/bin/mpirun && \
+        echo 'mpirun.real --allow-run-as-root --prefix /usr/local/mpi "$@"' >> /usr/local/mpi/bin/mpirun && \
+        chmod a+x /usr/local/mpi/bin/mpirun
 
 ##############################################################################
 # Install Miniconda 
 ##############################################################################
-RUN mkdir -p ~/miniconda3 && \
-    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh && \
-    bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3 || { echo 'Miniconda installation failed' ; exit 1; } && \
-    rm -rf ~/miniconda3/miniconda.sh && \
-    ~/miniconda3/bin/conda init bash || { echo 'conda init failed' ; exit 1; } && \
-    ~/miniconda3/bin/conda config --set auto_activate_base false || { echo 'conda config failed' ; exit 1; }
+RUN cd ${STAGE_DIR} && \
+        mkdir -p ~/miniconda3 && \
+        wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh && \
+        bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3 && \
+        rm -rf ~/miniconda3/miniconda.sh && \
+        ~/miniconda3/bin/conda init bash && \
+        ~/miniconda3/bin/conda config --set auto_activate_base false
 
 ##############################################################################
-# Create Conda Environment and Install PyTorch
+# Install flagscale requirements
 ##############################################################################
-SHELL ["bash", "-c"]
-RUN source ~/miniconda3/bin/activate && \
-    conda create -y --name flagscale python=3.10.12 && \
-    conda activate flagscale && \
-    conda install -y pytorch torchvision torchaudio pytorch-cuda=12.4 -c pytorch -c nvidia || { echo 'PyTorch installation failed' ; exit 1; }
+ENV TORCH_VERSION=3.12
+RUN cd ${STAGE_DIR} && \  
+    git clone -b CI https://github.com/phoenixdong/FlagScale.git && \
+    cd ${STAGE_DIR}/FlagScale/install && \
+    chmod +x install-requirements.sh && \
+    # flagscale-train
+    ./install-requirements.sh --env train && \
+    # flagscale-infernece
+    ./install-requirements.sh --env inference
